@@ -1,0 +1,3 @@
+# Pastebin
+
+## Nextjs + TailwindCSS + Redis
