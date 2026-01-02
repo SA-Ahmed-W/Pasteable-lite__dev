@@ -1,6 +1,6 @@
 import { formatTime } from "@/shared/lib";
 import { NextResponse } from "next/server";
-import { redisService } from "@/shared/services/redis";
+import { redisService } from "@/shared/services/redis_hash";
 
 export async function GET() {
   const dbStatus = await redisService.ping();
