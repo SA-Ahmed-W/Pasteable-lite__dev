@@ -1,75 +1,118 @@
-import { redis } from "../lib";
+import redis from "../lib/redis";
 
-interface RedisPayload {
+export interface RedisHashPayload {
   content: string;
   views: number;
-  max_views: number;
-  ttl_seconds: number;
-  createdAt: string;
+  maxViews: number; // -1 means unlimited
+  ttlSeconds: number; // -1 means no expiry
+  createdAt: number;
 }
+
+export interface CreateHashInput {
+  content: string;
+  maxViews?: number;
+  ttlSeconds?: number;
+}
+
 class RedisHashService {
-  /**
-   * Check if the Redis connection is alive.
-   * Returns true if the connection is alive, false otherwise.
-   * @returns {Promise<boolean>} A promise that resolves to a boolean indicating if the connection is alive.
-   */
+  private static readonly DEFAULT_LIMIT = -1;
+
+  /* ---------- Health ---------- */
+
   async ping(): Promise<boolean> {
     try {
-      const result = await redis.ping();
-      return result === "PONG";
-    } catch (error) {
-      console.error("Redis ping failed:", error);
+      return (await redis.ping()) === "PONG";
+    } catch {
       return false;
     }
   }
-  async hset(
-    key: string,
-    value: { content: string; ttl_seconds?: number; max_views?: number }
-  ): Promise<void> {
-    const payload = {
-      content: value.content,
+
+  /* ---------- Write ---------- */
+
+  async create(key: string, input: CreateHashInput): Promise<void> {
+    if (!key) throw new Error("Redis key is required");
+    if (!input?.content) throw new Error("Content is required");
+
+    const payload: RedisHashPayload = {
+      content: input.content,
       views: 0,
-      max_views: value.max_views || -1,
-      ttl_seconds: value.ttl_seconds || -1,
-      createdAt: Date.now().toString(),
+      maxViews: input.maxViews ?? RedisHashService.DEFAULT_LIMIT,
+      ttlSeconds: input.ttlSeconds ?? RedisHashService.DEFAULT_LIMIT,
+      createdAt: Date.now(),
     };
-    await redis.hset(key, payload);
+
+    try {
+      await redis.hset(key, {
+        content: payload.content,
+        views: payload.views,
+        maxViews: payload.maxViews,
+        ttlSeconds: payload.ttlSeconds,
+        createdAt: payload.createdAt,
+      });
+
+      if (payload.ttlSeconds > 0) {
+        await redis.expire(key, payload.ttlSeconds);
+      }
+    } catch (err) {
+      throw new Error(`Redis create failed: ${(err as Error).message}`);
+    }
   }
 
-  async hincrby(
-    key: string,
-    field: string = "views",
-    increment: number = 1
-  ): Promise<void> {
-    await redis.hincrby(key, field, increment);
-  }
+  /* ---------- Read ---------- */
 
-  async hgetall(key: string): Promise<RedisPayload | null> {
-    const result = await redis.hgetall(key);
-    if (!result) return null;
+  async get(key: string): Promise<RedisHashPayload | null> {
+    if (!key) return null;
+
+    const data = await redis.hgetall<Record<string, string>>(key);
+    if (!data || Object.keys(data).length === 0) return null;
+
     return {
-      content: result.content as string,
-      views: parseInt(result.views as string),
-      max_views: parseInt(result.max_views as string),
-      ttl_seconds: parseInt(result.ttl_seconds as string),
-      createdAt: result.createdAt as string,
+      content: data.content,
+      views: Number(data.views),
+      maxViews: Number(data.maxViews),
+      ttlSeconds: Number(data.ttlSeconds),
+      createdAt: Number(data.createdAt),
     };
   }
 
-  async hget(
-    key: string,
-    field: string
-  ): Promise<Record<string, unknown> | null> {
-    return await redis.hget(key, field);
+  /* ---------- View Tracking ---------- */
+
+  async consumeView(key: string): Promise<RedisHashPayload | null> {
+    const payload = await this.get(key);
+    if (!payload) return null;
+
+    if (
+      payload.maxViews !== RedisHashService.DEFAULT_LIMIT &&
+      payload.views >= payload.maxViews
+    ) {
+      await this.delete(key);
+      return null;
+    }
+
+    try {
+      await redis.hincrby(key, "views", 1);
+      return { ...payload, views: payload.views + 1 };
+    } catch (err) {
+      throw new Error(`View increment failed: ${(err as Error).message}`);
+    }
   }
-  async del(key: string): Promise<void> {
+
+  /* ---------- Delete ---------- */
+
+  async delete(key: string): Promise<void> {
+    if (!key) return;
     await redis.del(key);
   }
 
-  async expire(key: string, seconds: number): Promise<void> {
-    await redis.expire(key, seconds);
+  /* ---------- Utilities ---------- */
+
+  async exists(key: string): Promise<boolean> {
+    return (await redis.exists(key)) === 1;
+  }
+
+  async ttl(key: string): Promise<number> {
+    return await redis.ttl(key);
   }
 }
-const redisHashService = new RedisHashService();
 
-export { redisHashService };
+export const redisHashService = new RedisHashService();
