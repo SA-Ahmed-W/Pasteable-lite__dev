@@ -259,8 +259,16 @@ export async function GET(
       status: 200,
       headers: {
         "Content-Type": "text/html; charset=utf-8",
-        "Content-Security-Policy":
-          "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'",
+        "Content-Security-Policy": [
+          "default-src 'none'", // Block everything by default
+          "style-src 'unsafe-inline'", // Allow inline styles
+          "connect-src 'self'", // Allow same-origin XHR/fetch/websocket
+          "script-src 'none'", // Block all JavaScript (security!)
+          "img-src 'self' data:", // Allow images if you add them later
+          "base-uri 'none'", // Prevent <base> tag hijacking
+          "frame-ancestors 'none'", // Prevent embedding in iframes
+          "form-action 'none'", // Block forms (extra security)
+        ].join("; "),
       },
     });
   } catch (error) {
