@@ -1,9 +1,9 @@
 import { formatTime } from "@/shared/lib";
 import { NextResponse } from "next/server";
-import { redisService } from "@/shared/services/redis_hash";
+import { redisHashService } from "@/shared/services";
 
 export async function GET() {
-  const dbStatus = await redisService.ping();
+  const dbStatus = await redisHashService.ping();
 
   const uptimeSeconds = process.uptime();
   const uptimeMs = Math.floor(uptimeSeconds * 1000);
