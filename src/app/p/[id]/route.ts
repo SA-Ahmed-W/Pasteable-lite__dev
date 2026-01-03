@@ -13,6 +13,7 @@ export async function GET(
     if (!id || !id.trim()) {
       return new NextResponse("Not Found", { status: 404 });
     }
+
     const nowMs =
       env.TEST_MODE && req.headers.get("x-test-now-ms")
         ? Number(req.headers.get("x-test-now-ms"))
@@ -25,23 +26,39 @@ export async function GET(
       return new NextResponse("Not Found", { status: 404 });
     }
 
-    // Availability checks (NO view increment)
+    // Availability checks
     if (
-      (paste.maxViews !== null && paste.views >= paste.maxViews) ||
-      (paste.expiresAt !== null && nowMs >= paste.expiresAt)
+      paste.maxViews !== null &&
+      paste.maxViews !== -1 &&
+      paste.views >= paste.maxViews
     ) {
       return new NextResponse("Not Found", { status: 404 });
+    }
+
+    if (
+      paste.expiresAt !== null &&
+      paste.expiresAt !== -1 &&
+      nowMs >= paste.expiresAt
+    ) {
+      return new NextResponse("Not Found", {
+        status: 404,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Security-Policy":
+            "default-src 'none'; style-src 'self'; base-uri 'none'; frame-ancestors 'none'",
+        },
+      });
     }
 
     const safeContent = escapeHtml(paste.content);
 
     const expiresText =
-      paste.expiresAt === null
+      paste.expiresAt === -1 || paste.expiresAt === null
         ? "Never"
         : new Date(paste.expiresAt).toISOString();
 
     const viewsText =
-      paste.maxViews === null
+      paste.maxViews === null || paste.maxViews === -1
         ? `${paste.views} / ∞`
         : `${paste.views} / ${paste.maxViews}`;
 

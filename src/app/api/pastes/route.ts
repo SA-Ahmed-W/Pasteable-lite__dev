@@ -7,15 +7,15 @@ import { REDIS_PASTE_KEY_PREFIX } from "@/shared/constants";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    pasteSchema.parse(body);
+    const parsed = pasteSchema.parse(body);
 
     const id = defaultIDGenerator.generate(10);
     const redisKey = REDIS_PASTE_KEY_PREFIX + id;
 
     await redisHashService.create(redisKey, {
-      content: body.content,
-      ttlSeconds: body.ttl_seconds ?? -1,
-      maxViews: body.max_views ?? -1,
+      content: parsed.content,
+      ttlSeconds: parsed.ttl_seconds ?? undefined,
+      maxViews: parsed.max_views ?? undefined,
     });
 
     return NextResponse.json(
@@ -28,7 +28,16 @@ export async function POST(req: Request) {
   } catch (error) {
     if (isZodError(error)) {
       return NextResponse.json(
-        { error: error.issues.map((e) => e.message).join(", ") },
+        {
+          error: error.issues.map((issue) => {
+            if (issue.code === "invalid_type") {
+              return `${issue.path.join(".")}: ${issue.path.join(
+                "."
+              )} is required`;
+            }
+            return issue.message;
+          }),
+        },
         { status: 400 }
       );
     }

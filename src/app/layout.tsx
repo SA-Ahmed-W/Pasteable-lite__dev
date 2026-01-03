@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import "./globals.css";
+import { ToastifyClient } from "@/shared/components";
 
 export const metadata: Metadata = {
   title: "Pastebin",
@@ -14,7 +15,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={` antialiased`}>{children}</body>
+      <body className={` antialiased`}>
+        {children}
+        <ToastifyClient />
+      </body>
     </html>
   );
 }

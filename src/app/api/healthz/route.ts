@@ -13,11 +13,10 @@ export async function GET() {
   return NextResponse.json({
     ok: dbStatus,
     api_version: "1.0",
-    dbStatus,
+    redis: dbStatus,
     datetime: new Date().toISOString(),
-    nodeVersion: process.version,
     uptimeSeconds,
     uptimeMs,
-    uptime: humanUptime,
+    uptimeHuman: humanUptime,
   });
 }
