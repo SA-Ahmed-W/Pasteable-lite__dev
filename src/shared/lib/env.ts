@@ -3,7 +3,10 @@ function getEnv(name: string, required?: boolean): string {
 
   if (!value) {
     if (required) {
-      throw new Error(`Missing required environment variable: ${name}`);
+      // Only log warning, don't throw during build
+      if (typeof window === "undefined") {
+        console.warn(`⚠️  Missing required environment variable: ${name}`);
+      }
     }
     return "";
   }

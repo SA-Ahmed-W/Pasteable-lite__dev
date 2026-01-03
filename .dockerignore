@@ -1,0 +1,47 @@
+// # Dependencies
+node_modules
+.pnpm-store
+
+// # Build outputs
+.next
+dist
+out
+build
+
+// # Logs
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+// # Environment files (don't copy, pass at runtime)
+.env*
+
+// # Development
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+// # Git
+.git
+.gitignore
+
+// # Testing
+coverage
+.nyc_output
+
+// # OS
+.DS_Store
+Thumbs.db
+
+// # Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+// # Misc
+README.md
+.editorconfig
+.eslintrc.json

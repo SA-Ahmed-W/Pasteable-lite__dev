@@ -26,7 +26,11 @@ export default function PasteCreator() {
     setResult(null);
 
     try {
-      const payload: unknown = { content };
+      const payload: {
+        content: string;
+        ttl_seconds?: number;
+        max_views?: number;
+      } = { content };
 
       if (ttl.trim()) payload.ttl_seconds = Number(ttl);
       if (maxViews.trim()) payload.max_views = Number(maxViews);
@@ -45,7 +49,8 @@ export default function PasteCreator() {
 
       setResult(data);
     } catch (err: unknown) {
-      toast.error(err.message || "Something went wrong");
+      if (err instanceof Error) toast.error(err.message);
+      else toast.error("Something went wrong");
     } finally {
       setLoading(false);
     }

@@ -44,3 +44,6 @@ coverage/
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local files
+helper.runners.txt
